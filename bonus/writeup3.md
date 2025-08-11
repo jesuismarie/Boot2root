@@ -614,9 +614,9 @@
 	(gdb) disas phase_4
 	```
 
-	Result (simplified):
+	Result:
 
-	```as,
+	```asm
 	Dump of assembler code for function phase_4:
 		0x08048ce0 <+0>:	push   %ebp
 		0x08048ce1 <+1>:	mov    %esp,%ebp
@@ -1230,7 +1230,7 @@
 
 	Disassembly of `main` function:
 
-	```
+	```asm
 	Dump of assembler code for function main:
 		0x080483f4 <+0>:	push   %ebp
 		0x080483f5 <+1>:	mov    %esp,%ebp
