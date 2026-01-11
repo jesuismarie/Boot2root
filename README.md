@@ -14,7 +14,7 @@ This repository includes:
 
 ## Setup Instructions
 
-To begin your Boot2Root challenge, download the designated vulnerable machine image (e.g., from VulnHub or Offensive Security) and run it inside a virtual environment.
+To begin your Boot2Root challenge, download the designated vulnerable machine ISO and run it inside a virtual environment.
 
 ### Requirements
 
@@ -94,11 +94,10 @@ A level is considered **complete** when:
 
 ---
 
-## Contact
+## ISO File
 
-Have questions or need help with the VM image?
-
-📧 **[mari.nazaryan7173@gmail.com](mailto:mari.nazaryan7173@gmail.com)**
+Need the Snow Crash ISO?
+Contact via email: **[mari.nazaryan7173@gmail.com](mailto:mari.nazaryan7173@gmail.com)**
 
 ---
 
