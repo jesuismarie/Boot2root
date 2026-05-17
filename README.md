@@ -72,8 +72,7 @@ For each **new and valid method** you discover:
 ├── bonus/
 │   ├── writeup3
 │   ├── writeup4
-│   ├── writeup5
-│   └── ...
+│   └──writeup5
 ├── scripts/
 │   ├── exploit.sh
 │   └── ...
